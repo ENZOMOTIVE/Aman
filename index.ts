@@ -1,79 +1,64 @@
-import readline from "readline";
-
-import { openai } from "@ai-sdk/openai";
-import { generateText } from "ai";
+import express, { Request, Response } from "express";
+import bodyParser from "body-parser";
+import twilio from "twilio";
+import base58 from "bs58";
+import { Keypair, Connection } from "@solana/web3.js";
 
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
 import { solana } from "@goat-sdk/wallet-solana";
-
-import { Connection, Keypair } from "@solana/web3.js";
-
-import base58 from "bs58";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
 
 require("dotenv").config();
 
-// 1. Create the wallet client
-const connection = new Connection(process.env.SOLANA_RPC_URL as string);
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
 const keypair = Keypair.fromSecretKey(base58.decode(process.env.SOLANA_PRIVATE_KEY as string));
+const connection = new Connection(process.env.SOLANA_RPC_URL as string);
 
-async function chat() {
-    // 2. Get the onchain tools for the wallet
-    const tools = await getOnChainTools({
-        wallet: solana({
-            keypair,
-            connection,
-        }),
+let tools: any;
+
+(async () => {
+    tools = await getOnChainTools({
+        wallet: solana({ keypair, connection }),
     });
 
- 
-    type Message = {
-        role: "user" | "assistant";
-        content: string;
-    };
+    // WhatsApp endpoint with typed req/res
+    app.post("/api/send-whatsapp", async (req: Request, res: Response) => {
+        const from = req.body.From;
+        const userMessage = req.body.Body;
 
-    console.log("Chat started. Type 'exit' to end the conversation.");
+        console.log("Received WhatsApp:", from, userMessage);
 
-    const conversationHistory: Message[] = [];
-
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
-
-    const askQuestion = () => {
-        rl.question("You: ", async (prompt) => {
-            if (prompt.toLowerCase() === "exit") {
-                rl.close();
-                return;
-            }
-
-            conversationHistory.push({ role: "user", content: prompt });
-
+        try {
             const result = await generateText({
                 model: openai("gpt-4o-mini"),
-                tools: tools,
-                maxSteps: 10, // Maximum number of tool invocations per request
-                prompt: `You are a based crypto degen assistant. You're knowledgeable about DeFi, NFTs, and trading. You use crypto slang naturally and stay up to date with Solana ecosystem. You help users with their trades and provide market insights. Keep responses concise and use emojis occasionally.
-
-Previous conversation:
-${conversationHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}
-
-Current request: ${prompt}`,
-                onStepFinish: (event) => {
-                    console.log("Tool execution:", event.toolResults);
-                },
+                tools,
+                maxSteps: 10,
+                prompt: `You are a based crypto degen assistant. You're knowledgeable about DeFi, NFTs, and trading. You use crypto slang naturally and stay up to date with Solana ecosystem. Keep responses concise and use emojis. User asked: ${userMessage}`
             });
 
-            conversationHistory.push({
-                role: "assistant",
-                content: result.text,
+            const responseText = result.text;
+
+            const message = await twilioClient.messages.create({
+                to: from,
+                from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+                body: responseText,
             });
-            console.log("Assistant:", result.text);
-            askQuestion();
-        });
-    };
 
-    askQuestion();
-}
+            res.json({ success: true, sid: message.sid });
+        } catch (err: any) {
+            console.error("Error:", err);
+            res.status(500).json({ success: false, error: err.message });
+        }
+    });
 
-chat().catch(console.error);
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+    });
+})();
