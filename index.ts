@@ -3,13 +3,17 @@ import bodyParser from "body-parser";
 import twilio from "twilio";
 import base58 from "bs58";
 import { Keypair, Connection } from "@solana/web3.js";
-
+import { nfts } from "@goat-sdk/plugin-solana-nfts";
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
 import { solana } from "@goat-sdk/wallet-solana";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 
+
 require("dotenv").config();
+
+import { Marketprice} from './okx-plugins/market/market-price';
+
 
 const app = express();
 app.use(bodyParser.json());
@@ -25,6 +29,11 @@ let tools: any;
 (async () => {
     tools = await getOnChainTools({
         wallet: solana({ keypair, connection }),
+
+        plugins: [
+         nfts(),
+         Marketprice()
+        ]
     });
 
     // WhatsApp endpoint with typed req/res
@@ -39,7 +48,7 @@ let tools: any;
                 model: openai("gpt-4o-mini"),
                 tools,
                 maxSteps: 10,
-                prompt: `You are a based crypto degen assistant. You're knowledgeable about DeFi, NFTs, and trading. You use crypto slang naturally and stay up to date with Solana ecosystem. Keep responses concise and use emojis. User asked: ${userMessage}`
+                prompt: `${userMessage}`
             });
 
             const responseText = result.text;
