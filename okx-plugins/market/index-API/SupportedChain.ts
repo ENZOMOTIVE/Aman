@@ -4,7 +4,7 @@ import {
     createTool,
   } from "@goat-sdk/core";
   import crypto from "crypto";
-  import { z } from "zod"
+  import { z } from "zod";
   
   export class OkxSupportedChainsPlugin extends PluginBase<WalletClientBase> {
     private apiKey: string;

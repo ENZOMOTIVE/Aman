@@ -12,7 +12,20 @@ import { openai } from "@ai-sdk/openai";
 
 require("dotenv").config();
 
+// OKX Marketprice plugins
 import { Marketprice} from './okx-plugins/market/market-price';
+import { OKXGetTrade } from "./okx-plugins/market/get-trade";
+import { OkxHistoricalCandles } from "./okx-plugins/market/getcandlestickshistory";
+import {OkxCandles } from "./okx-plugins/market/candels";
+
+//OKX Index Plugins
+import { IndexTokenPrice } from "./okx-plugins/market/index-API/GetTokenIndexPrice";
+import { HistoricalIndexPrice } from "./okx-plugins/market/index-API/HistoricalIndexprice";
+import { OkxSupportedChains } from "./okx-plugins/market/index-API/SupportedChain";
+
+// Trade Plugins
+import { OkxSwap } from "./okx-plugins/trade/swap";
+
 
 
 const app = express();
@@ -32,7 +45,21 @@ let tools: any;
 
         plugins: [
          nfts(),
-         Marketprice()
+         Marketprice(),
+         OKXGetTrade(),
+         OkxHistoricalCandles(),
+         OkxCandles(),
+
+         //Index Plugins 
+         IndexTokenPrice(),
+         HistoricalIndexPrice(),
+         OkxSupportedChains(),
+        
+         //Trade Plugins
+         OkxSwap()
+         
+
+
         ]
     });
 
