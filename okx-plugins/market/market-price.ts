@@ -11,7 +11,7 @@ export class okxmarketprice extends PluginBase<WalletClientBase> {
         super("market_price", []);
         this.apiKey = process.env.OKX_API_KEY !;
         this.secretKey = process.env.OKX_API_SECRET!;
-        this.passphrase = process.env.OKX_API_PASSPHRASE?.trim() ?? "";
+        this.passphrase = process.env.OKX_API_PASSPHRASE?.trim() !;
     }
 
  
@@ -61,10 +61,10 @@ export class okxmarketprice extends PluginBase<WalletClientBase> {
                 method,
                 headers: {
                   "Content-Type": "application/json",
-                  "OK-ACCESS-KEY": "0e11c2af-7452-4631-b035-c8a3bb33517a",
+                  "OK-ACCESS-KEY": this.apiKey,
                   "OK-ACCESS-SIGN": sign,
                   "OK-ACCESS-TIMESTAMP": timestamp,
-                  "OK-ACCESS-PASSPHRASE": "143125143Aa!@#$",
+                  "OK-ACCESS-PASSPHRASE": this.passphrase,
                 },
                 body: JSON.stringify(requestBody),
               });
